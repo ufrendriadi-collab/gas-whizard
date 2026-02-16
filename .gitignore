@@ -1,0 +1,14 @@
+# Keamanan: Jangan pernah upload file environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependency: Folder berat yang bikin laptop i3 sesak
+node_modules/
+
+# Build: Hasil kompilasi Next.js
+.next/
+out/
+build/
