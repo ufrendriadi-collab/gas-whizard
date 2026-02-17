@@ -10,7 +10,6 @@ export default function GasWizard() {
   const [isCached, setIsCached] = useState(false);
   const [cacheAge, setCacheAge] = useState(0);
 
-  // 1. Ambil Harga ETH (Rupiah)
   const fetchEthPrice = async () => {
     try {
       const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=idr');
@@ -21,13 +20,11 @@ export default function GasWizard() {
     }
   };
 
-  // 2. Ambil Data Gas dari API Internal (Aman & Tersembunyi)
   const fetchGas = async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/gas');
       
-      // Handle Rate Limit (Alchemy/Server)
       if (response.status === 429) {
         const data = await response.json();
         setGasPrice('Limit');
@@ -38,11 +35,9 @@ export default function GasWizard() {
       
       const data = await response.json();
       
-      console.log('📊 API Response:', data); // Debug log
+      console.log('📊 API Response:', data);
       
       if (data.result) {
-        // Konversi Hex (Wei) ke Gwei
-        // 1 Gwei = 1,000,000,000 Wei (10^9)
         const weiValue = parseInt(data.result, 16);
         const gweiValue = weiValue / 1e9;
         
@@ -50,8 +45,6 @@ export default function GasWizard() {
         console.log('Gwei:', gweiValue);
         
         setGasPrice(gweiValue.toFixed(3));
-        
-        // Update info Caching
         setIsCached(data.cached || false);
         setCacheAge(data.cacheAge || 0);
       } else {
@@ -64,63 +57,57 @@ export default function GasWizard() {
     setLoading(false);
   };
 
-  // 3. Efek saat pertama kali buka & Interval update
   useEffect(() => {
     fetchGas();
     fetchEthPrice();
-    const gasInterval = setInterval(fetchGas, 30000); // 30 detik
-    const ethInterval = setInterval(fetchEthPrice, 60000); // 60 detik
+    const gasInterval = setInterval(fetchGas, 30000);
+    const ethInterval = setInterval(fetchEthPrice, 60000);
     return () => { clearInterval(gasInterval); clearInterval(ethInterval); };
   }, []);
 
-  // 4. LOGIKA KALKULASI - Fixed Formula
   const calculateCost = (gasUnits: number, multiplier: number = 1) => {
     const currentGas = parseFloat(gasPrice);
-    
-    // Validasi: pastikan gas price dan ETH price valid
-    if (isNaN(currentGas) || currentGas === 0 || ethPrice === 0) {
-      return 0;
-    }
-    
-    // Formula yang BENAR:
-    // Cost (ETH) = (Gas Price in Gwei × Gas Units) / 10^9
-    // Cost (IDR) = Cost (ETH) × ETH Price (IDR)
-    
-    // Simplified:
-    // Cost (IDR) = ((Gwei × multiplier) × gasUnits / 10^9) × ethPrice
-    
+    if (isNaN(currentGas) || currentGas === 0 || ethPrice === 0) return 0;
     const costInEth = (currentGas * multiplier * gasUnits) / 1e9;
-    const costInIdr = costInEth * ethPrice;
-    
-    return costInIdr;
+    return costInEth * ethPrice;
   };
 
-  // Calculate costs untuk 3 speed tiers
-  const lowSpeedCost = calculateCost(21000, 0.9);    // 10% cheaper
-  const standardCost = calculateCost(21000, 1.0);    // Standard
-  const fastCost = calculateCost(21000, 1.3);        // 30% more expensive
+  const lowSpeedCost = calculateCost(21000, 0.9);
+  const standardCost = calculateCost(21000, 1.0);
+  const fastCost = calculateCost(21000, 1.3);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 text-slate-200">
-      {/* Header */}
-      <header className="flex items-center justify-between px-8 py-6 border-b border-slate-800 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/20">
-            <Fuel className="w-6 h-6 text-white" />
+      
+      {/* ✅ HEADER - 2 baris di mobile, 1 baris di desktop */}
+      <header className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-800 backdrop-blur-md sticky top-0 z-10 gap-3">
+        {/* Logo */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/20">
+              <Fuel className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-400">
+              GASWIZARD
+            </h1>
           </div>
-          <h1 className="text-2xl font-black text-white italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-400">
-            GASWIZARD
-          </h1>
+          
+          {/* Connect Wallet - tampil di samping logo saat mobile */}
+          <button className="sm:hidden bg-white text-slate-950 px-4 py-2 rounded-full font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg">
+            Connect Wallet
+          </button>
         </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="text-right hidden sm:block">
+
+        {/* ETH Price + Connect Wallet - baris 2 di mobile, samping di desktop */}
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end">
+          <div className="text-center sm:text-right">
             <div className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Live ETH Price</div>
             <div className="text-sm font-bold text-blue-400">
               Rp {ethPrice > 0 ? ethPrice.toLocaleString('id-ID') : 'Loading...'}
             </div>
           </div>
-          <button className="bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
+          {/* Connect Wallet - hanya tampil di desktop */}
+          <button className="hidden sm:block bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
             Connect Wallet
           </button>
         </div>
@@ -131,11 +118,14 @@ export default function GasWizard() {
         {/* Card Utama */}
         <div className="relative group mb-16">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-          <div className="relative bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] p-12 border border-slate-800 shadow-2xl overflow-hidden">
+          <div className="relative bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] p-8 sm:p-12 border border-slate-800 shadow-2xl overflow-hidden">
             <div className="text-center relative z-10">
-              <div className="text-[10rem] font-black leading-none tracking-tighter text-white mb-2 drop-shadow-2xl">
+              
+              {/* ✅ ANGKA - responsive font size */}
+              <div className="text-[4rem] sm:text-[7rem] md:text-[10rem] font-black leading-none tracking-tighter text-white mb-2 drop-shadow-2xl">
                 {gasPrice}
               </div>
+              
               <div className="text-blue-400 text-sm tracking-[0.5em] uppercase font-medium mb-10">
                 Gwei Standard
               </div>
@@ -161,7 +151,7 @@ export default function GasWizard() {
           </div>
         </div>
 
-        {/* Speed Options (3 Kolom) */}
+        {/* Speed Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Low Speed */}
           <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 hover:border-slate-700 transition-all">
