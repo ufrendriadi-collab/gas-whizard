@@ -6,15 +6,31 @@ import { Fuel, RefreshCw } from 'lucide-react';
 export default function GasWizard() {
   const [gasPrice, setGasPrice] = useState<string>('...');
   const [ethPrice, setEthPrice] = useState<number>(0);
+  const [ethPriceUSD, setEthPriceUSD] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [isCached, setIsCached] = useState(false);
   const [cacheAge, setCacheAge] = useState(0);
+  const [currency, setCurrency] = useState<'IDR' | 'USD'>('IDR');
+
+  // ✅ Load currency preference saat pertama kali
+  useEffect(() => {
+    const savedCurrency = localStorage.getItem('currency') as 'IDR' | 'USD' | null;
+    if (savedCurrency) {
+      setCurrency(savedCurrency);
+    }
+  }, []);
+
+  // ✅ Save currency preference setiap kali berubah
+  useEffect(() => {
+    localStorage.setItem('currency', currency);
+  }, [currency]);
 
   const fetchEthPrice = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=idr');
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=idr,usd');
       const data = await response.json();
       if (data.ethereum?.idr) setEthPrice(data.ethereum.idr);
+      if (data.ethereum?.usd) setEthPriceUSD(data.ethereum.usd);
     } catch (e) { 
       console.error("API Price Error", e); 
     }
@@ -67,19 +83,30 @@ export default function GasWizard() {
 
   const calculateCost = (gasUnits: number, multiplier: number = 1) => {
     const currentGas = parseFloat(gasPrice);
-    if (isNaN(currentGas) || currentGas === 0 || ethPrice === 0) return 0;
+    const currentEthPrice = currency === 'IDR' ? ethPrice : ethPriceUSD;
+    
+    if (isNaN(currentGas) || currentGas === 0 || currentEthPrice === 0) return 0;
+    
     const costInEth = (currentGas * multiplier * gasUnits) / 1e9;
-    return costInEth * ethPrice;
+    return costInEth * currentEthPrice;
   };
 
   const lowSpeedCost = calculateCost(21000, 0.9);
   const standardCost = calculateCost(21000, 1.0);
   const fastCost = calculateCost(21000, 1.3);
 
+  const formatCurrency = (amount: number) => {
+    if (currency === 'IDR') {
+      return `Rp ${amount.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
+    } else {
+      return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 text-slate-200">
       
-      {/* ✅ HEADER - 2 baris di mobile, 1 baris di desktop */}
+      {/* Header */}
       <header className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-800 backdrop-blur-md sticky top-0 z-10 gap-3">
         {/* Logo */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
@@ -92,21 +119,51 @@ export default function GasWizard() {
             </h1>
           </div>
           
-          {/* Connect Wallet - tampil di samping logo saat mobile */}
+          {/* Set Gas Alert - tampil di samping logo saat mobile */}
           <button className="sm:hidden bg-white text-slate-950 px-4 py-2 rounded-full font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg">
-            Connect Wallet
+            Set Gas Alert
           </button>
         </div>
 
-        {/* ETH Price + Connect Wallet - baris 2 di mobile, samping di desktop */}
+        {/* ETH Price + Currency Toggle + Set Gas Alert */}
         <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end">
+          
+          {/* Currency Toggle */}
+          <div className="flex items-center gap-2 bg-slate-800/50 rounded-full p-1">
+            <button
+              onClick={() => setCurrency('IDR')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                currency === 'IDR' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              IDR
+            </button>
+            <button
+              onClick={() => setCurrency('USD')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                currency === 'USD' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              USD
+            </button>
+          </div>
+
+          {/* ETH Price Display */}
           <div className="text-center sm:text-right">
             <div className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Live ETH Price</div>
             <div className="text-sm font-bold text-blue-400">
-              Rp {ethPrice > 0 ? ethPrice.toLocaleString('id-ID') : 'Loading...'}
+              {currency === 'IDR' 
+                ? (ethPrice > 0 ? `Rp ${ethPrice.toLocaleString('id-ID')}` : 'Loading...') 
+                : (ethPriceUSD > 0 ? `$${ethPriceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : 'Loading...')
+              }
             </div>
           </div>
-          {/* Connect Wallet - hanya tampil di desktop */}
+
+          {/* Set Gas Alert - hanya tampil di desktop */}
           <button className="hidden sm:block bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
             Set Gas Alert
           </button>
@@ -120,12 +177,9 @@ export default function GasWizard() {
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
           <div className="relative bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] p-8 sm:p-12 border border-slate-800 shadow-2xl overflow-hidden">
             <div className="text-center relative z-10">
-              
-              {/* ✅ ANGKA - responsive font size */}
               <div className="text-[4rem] sm:text-[7rem] md:text-[10rem] font-black leading-none tracking-tighter text-white mb-2 drop-shadow-2xl">
                 {gasPrice}
               </div>
-              
               <div className="text-blue-400 text-sm tracking-[0.5em] uppercase font-medium mb-10">
                 Gwei Standard
               </div>
@@ -167,7 +221,7 @@ export default function GasWizard() {
               <span className="text-sm text-slate-500 ml-2 font-normal italic">Gwei</span>
             </div>
             <div className="text-lg text-green-400 font-bold">
-              Rp {lowSpeedCost > 0 ? lowSpeedCost.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}
+              {lowSpeedCost > 0 ? formatCurrency(lowSpeedCost) : formatCurrency(0)}
             </div>
           </div>
 
@@ -182,7 +236,7 @@ export default function GasWizard() {
               <span className="text-sm text-slate-500 ml-2 font-normal italic">Gwei</span>
             </div>
             <div className="text-lg text-blue-400 font-bold">
-              Rp {standardCost > 0 ? standardCost.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}
+              {standardCost > 0 ? formatCurrency(standardCost) : formatCurrency(0)}
             </div>
           </div>
 
@@ -200,7 +254,7 @@ export default function GasWizard() {
               <span className="text-sm text-slate-500 ml-2 font-normal italic">Gwei</span>
             </div>
             <div className="text-lg text-orange-400 font-bold">
-              Rp {fastCost > 0 ? fastCost.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}
+              {fastCost > 0 ? formatCurrency(fastCost) : formatCurrency(0)}
             </div>
           </div>
         </div>
