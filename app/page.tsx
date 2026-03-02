@@ -108,7 +108,7 @@ export default function GasWizard() {
           </div>
           {/* Connect Wallet - hanya tampil di desktop */}
           <button className="hidden sm:block bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
-            Connect Wallet
+            Set Gas Alert
           </button>
         </div>
       </header>
