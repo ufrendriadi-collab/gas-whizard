@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Fuel, RefreshCw } from 'lucide-react';
+import { Fuel, RefreshCw, Bell, X } from 'lucide-react';
 
 export default function GasWizard() {
   const [gasPrice, setGasPrice] = useState<string>('...');
@@ -11,19 +11,35 @@ export default function GasWizard() {
   const [isCached, setIsCached] = useState(false);
   const [cacheAge, setCacheAge] = useState(0);
   const [currency, setCurrency] = useState<'IDR' | 'USD'>('IDR');
+  
+  // ✅ TAMBAH: Alert states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertThreshold, setAlertThreshold] = useState<number>(15); // Default 15 Gwei
+  const [alertEnabled, setAlertEnabled] = useState(false);
+  const [lastAlertTime, setLastAlertTime] = useState<number>(0);
 
-  // ✅ Load currency preference saat pertama kali
+  // Load preferences
   useEffect(() => {
     const savedCurrency = localStorage.getItem('currency') as 'IDR' | 'USD' | null;
-    if (savedCurrency) {
-      setCurrency(savedCurrency);
-    }
+    if (savedCurrency) setCurrency(savedCurrency);
+    
+    // ✅ Load alert settings
+    const savedThreshold = localStorage.getItem('alertThreshold');
+    const savedAlertEnabled = localStorage.getItem('alertEnabled');
+    if (savedThreshold) setAlertThreshold(parseFloat(savedThreshold));
+    if (savedAlertEnabled) setAlertEnabled(savedAlertEnabled === 'true');
   }, []);
 
-  // ✅ Save currency preference setiap kali berubah
+  // Save preferences
   useEffect(() => {
     localStorage.setItem('currency', currency);
   }, [currency]);
+
+  // ✅ Save alert settings
+  useEffect(() => {
+    localStorage.setItem('alertThreshold', alertThreshold.toString());
+    localStorage.setItem('alertEnabled', alertEnabled.toString());
+  }, [alertThreshold, alertEnabled]);
 
   const fetchEthPrice = async () => {
     try {
@@ -51,18 +67,16 @@ export default function GasWizard() {
       
       const data = await response.json();
       
-      console.log('📊 API Response:', data);
-      
       if (data.result) {
         const weiValue = parseInt(data.result, 16);
         const gweiValue = weiValue / 1e9;
         
-        console.log('Wei:', weiValue);
-        console.log('Gwei:', gweiValue);
-        
         setGasPrice(gweiValue.toFixed(3));
         setIsCached(data.cached || false);
         setCacheAge(data.cacheAge || 0);
+        
+        // ✅ Check alert
+        checkAlert(gweiValue);
       } else {
         setGasPrice('Error');
       }
@@ -71,6 +85,44 @@ export default function GasWizard() {
       setGasPrice('Error'); 
     }
     setLoading(false);
+  };
+
+  // ✅ TAMBAH: Alert checker
+  const checkAlert = (currentGwei: number) => {
+    if (!alertEnabled) return;
+    
+    // Prevent spam: only alert once per 5 minutes
+    const now = Date.now();
+    if (now - lastAlertTime < 5 * 60 * 1000) return;
+    
+    if (currentGwei <= alertThreshold) {
+      setLastAlertTime(now);
+      
+      // Browser notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🎉 Gas Alert!', {
+          body: `Gas price dropped to ${currentGwei.toFixed(2)} Gwei!`,
+          icon: '/favicon.ico',
+          tag: 'gas-alert'
+        });
+      }
+      
+      // Visual alert (you can also add sound here)
+      console.log('🔔 ALERT: Gas is cheap!');
+    }
+  };
+
+  // ✅ TAMBAH: Request notification permission
+  const enableAlert = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setAlertEnabled(true);
+        setShowAlertModal(false);
+      } else {
+        alert('Please enable notifications to use Gas Alert feature');
+      }
+    }
   };
 
   useEffect(() => {
@@ -84,9 +136,7 @@ export default function GasWizard() {
   const calculateCost = (gasUnits: number, multiplier: number = 1) => {
     const currentGas = parseFloat(gasPrice);
     const currentEthPrice = currency === 'IDR' ? ethPrice : ethPriceUSD;
-    
     if (isNaN(currentGas) || currentGas === 0 || currentEthPrice === 0) return 0;
-    
     const costInEth = (currentGas * multiplier * gasUnits) / 1e9;
     return costInEth * currentEthPrice;
   };
@@ -108,7 +158,6 @@ export default function GasWizard() {
       
       {/* Header */}
       <header className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-slate-800 backdrop-blur-md sticky top-0 z-10 gap-3">
-        {/* Logo */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-500/20">
@@ -119,23 +168,22 @@ export default function GasWizard() {
             </h1>
           </div>
           
-          {/* Set Gas Alert - tampil di samping logo saat mobile */}
-          <button className="sm:hidden bg-white text-slate-950 px-4 py-2 rounded-full font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg">
-            Set Gas Alert
+          {/* Set Gas Alert Button - Mobile */}
+          <button 
+            onClick={() => setShowAlertModal(true)}
+            className="sm:hidden bg-white text-slate-950 px-4 py-2 rounded-full font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
+          >
+            <Bell className="w-3 h-3" />
+            {alertEnabled && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
           </button>
         </div>
 
-        {/* ETH Price + Currency Toggle + Set Gas Alert */}
         <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-end">
-          
-          {/* Currency Toggle */}
           <div className="flex items-center gap-2 bg-slate-800/50 rounded-full p-1">
             <button
               onClick={() => setCurrency('IDR')}
               className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                currency === 'IDR' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white'
+                currency === 'IDR' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
               IDR
@@ -143,16 +191,13 @@ export default function GasWizard() {
             <button
               onClick={() => setCurrency('USD')}
               className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                currency === 'USD' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white'
+                currency === 'USD' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
               USD
             </button>
           </div>
 
-          {/* ETH Price Display */}
           <div className="text-center sm:text-right">
             <div className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Live ETH Price</div>
             <div className="text-sm font-bold text-blue-400">
@@ -163,16 +208,110 @@ export default function GasWizard() {
             </div>
           </div>
 
-          {/* Set Gas Alert - hanya tampil di desktop */}
-          <button className="hidden sm:block bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
+          {/* Set Gas Alert Button - Desktop */}
+          <button 
+            onClick={() => setShowAlertModal(true)}
+            className="hidden sm:flex items-center gap-2 bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg"
+          >
+            <Bell className="w-4 h-4" />
             Set Gas Alert
+            {alertEnabled && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
           </button>
         </div>
       </header>
 
+      {/* ✅ TAMBAH: Alert Modal */}
+      {showAlertModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Bell className="w-6 h-6 text-blue-400" />
+                Gas Alert
+              </h2>
+              <button 
+                onClick={() => setShowAlertModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <p className="text-slate-400 mb-6">
+              Get notified when gas price drops below your threshold
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Alert Threshold (Gwei)
+              </label>
+              <input
+                type="number"
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="15"
+                step="0.1"
+                min="0"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Current gas: {gasPrice} Gwei
+              </p>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="mb-6">
+              <p className="text-sm text-slate-400 mb-2">Quick presets:</p>
+              <div className="flex gap-2">
+                {[10, 15, 20, 30].map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => setAlertThreshold(preset)}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                      alertThreshold === preset
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {alertEnabled ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                  <span className="text-sm text-green-400 font-medium">
+                    Alert is active
+                  </span>
+                </div>
+                <button
+                  onClick={() => setAlertEnabled(false)}
+                  className="w-full bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-3 rounded-lg font-bold hover:bg-red-500/20 transition-all"
+                >
+                  Disable Alert
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={enableAlert}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg"
+              >
+                Enable Alert
+              </button>
+            )}
+
+            <p className="text-xs text-slate-500 mt-4 text-center">
+              You'll be notified once every 5 minutes when gas drops below threshold
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12 max-w-5xl">
-        {/* Card Utama */}
         <div className="relative group mb-16">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
           <div className="relative bg-slate-900/40 backdrop-blur-2xl rounded-[2rem] p-8 sm:p-12 border border-slate-800 shadow-2xl overflow-hidden">
@@ -207,7 +346,6 @@ export default function GasWizard() {
 
         {/* Speed Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Low Speed */}
           <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between mb-6">
               <span className="text-3xl">🐢</span>
@@ -225,7 +363,6 @@ export default function GasWizard() {
             </div>
           </div>
 
-          {/* Standard */}
           <div className="bg-blue-600/10 backdrop-blur-xl rounded-2xl p-8 border border-blue-500/50 relative transform scale-105 shadow-xl shadow-blue-500/5">
             <div className="flex items-center justify-between mb-6">
               <span className="text-3xl">⚖️</span>
@@ -240,7 +377,6 @@ export default function GasWizard() {
             </div>
           </div>
 
-          {/* Fast Pass */}
           <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 hover:border-slate-700 transition-all">
             <div className="flex items-center justify-between mb-6">
               <span className="text-3xl">🚀</span>
