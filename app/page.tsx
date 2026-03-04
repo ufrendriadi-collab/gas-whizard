@@ -12,10 +12,11 @@ export default function GasWizard() {
   const [cacheAge, setCacheAge] = useState(0);
   const [currency, setCurrency] = useState<'IDR' | 'USD'>('IDR');
   
-  // ✅ TAMBAH: Alert states
+  // Alert states
   const [showAlertModal, setShowAlertModal] = useState(false);
-  const [alertThreshold, setAlertThreshold] = useState<number>(15); // Default 15 Gwei
+  const [alertThreshold, setAlertThreshold] = useState<number>(15);
   const [alertEnabled, setAlertEnabled] = useState(false);
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [lastAlertTime, setLastAlertTime] = useState<number>(0);
 
   // Load preferences
@@ -23,11 +24,13 @@ export default function GasWizard() {
     const savedCurrency = localStorage.getItem('currency') as 'IDR' | 'USD' | null;
     if (savedCurrency) setCurrency(savedCurrency);
     
-    // ✅ Load alert settings
     const savedThreshold = localStorage.getItem('alertThreshold');
     const savedAlertEnabled = localStorage.getItem('alertEnabled');
+    const savedTelegramEnabled = localStorage.getItem('telegramEnabled');
+    
     if (savedThreshold) setAlertThreshold(parseFloat(savedThreshold));
     if (savedAlertEnabled) setAlertEnabled(savedAlertEnabled === 'true');
+    if (savedTelegramEnabled) setTelegramEnabled(savedTelegramEnabled === 'true');
   }, []);
 
   // Save preferences
@@ -35,11 +38,11 @@ export default function GasWizard() {
     localStorage.setItem('currency', currency);
   }, [currency]);
 
-  // ✅ Save alert settings
   useEffect(() => {
     localStorage.setItem('alertThreshold', alertThreshold.toString());
     localStorage.setItem('alertEnabled', alertEnabled.toString());
-  }, [alertThreshold, alertEnabled]);
+    localStorage.setItem('telegramEnabled', telegramEnabled.toString());
+  }, [alertThreshold, alertEnabled, telegramEnabled]);
 
   const fetchEthPrice = async () => {
     try {
@@ -75,7 +78,6 @@ export default function GasWizard() {
         setIsCached(data.cached || false);
         setCacheAge(data.cacheAge || 0);
         
-        // ✅ Check alert
         checkAlert(gweiValue);
       } else {
         setGasPrice('Error');
@@ -87,11 +89,9 @@ export default function GasWizard() {
     setLoading(false);
   };
 
-  // ✅ TAMBAH: Alert checker
-  const checkAlert = (currentGwei: number) => {
-    if (!alertEnabled) return;
+  const checkAlert = async (currentGwei: number) => {
+    if (!alertEnabled && !telegramEnabled) return;
     
-    // Prevent spam: only alert once per 5 minutes
     const now = Date.now();
     if (now - lastAlertTime < 5 * 60 * 1000) return;
     
@@ -99,7 +99,7 @@ export default function GasWizard() {
       setLastAlertTime(now);
       
       // Browser notification
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if (alertEnabled && 'Notification' in window && Notification.permission === 'granted') {
         new Notification('🎉 Gas Alert!', {
           body: `Gas price dropped to ${currentGwei.toFixed(2)} Gwei!`,
           icon: '/favicon.ico',
@@ -107,12 +107,27 @@ export default function GasWizard() {
         });
       }
       
-      // Visual alert (you can also add sound here)
+      // Telegram notification
+      if (telegramEnabled) {
+        try {
+          await fetch('/api/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              gasPrice: currentGwei.toFixed(2),
+              threshold: alertThreshold
+            })
+          });
+          console.log('📱 Telegram notification sent!');
+        } catch (error) {
+          console.error('Failed to send Telegram notification:', error);
+        }
+      }
+      
       console.log('🔔 ALERT: Gas is cheap!');
     }
   };
 
-  // ✅ TAMBAH: Request notification permission
   const enableAlert = async () => {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
@@ -168,13 +183,12 @@ export default function GasWizard() {
             </h1>
           </div>
           
-          {/* Set Gas Alert Button - Mobile */}
           <button 
             onClick={() => setShowAlertModal(true)}
             className="sm:hidden bg-white text-slate-950 px-4 py-2 rounded-full font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
           >
             <Bell className="w-3 h-3" />
-            {alertEnabled && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
+            {(alertEnabled || telegramEnabled) && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
           </button>
         </div>
 
@@ -208,22 +222,21 @@ export default function GasWizard() {
             </div>
           </div>
 
-          {/* Set Gas Alert Button - Desktop */}
           <button 
             onClick={() => setShowAlertModal(true)}
             className="hidden sm:flex items-center gap-2 bg-white text-slate-950 px-5 py-2 rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg"
           >
             <Bell className="w-4 h-4" />
             Set Gas Alert
-            {alertEnabled && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
+            {(alertEnabled || telegramEnabled) && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
           </button>
         </div>
       </header>
 
-      {/* ✅ TAMBAH: Alert Modal */}
+      {/* Alert Modal - FIXED SCROLLABLE */}
       {showAlertModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <Bell className="w-6 h-6 text-blue-400" />
@@ -279,19 +292,64 @@ export default function GasWizard() {
               </div>
             </div>
 
-            {alertEnabled ? (
+            {/* Notification Methods */}
+            <div className="mb-6 space-y-3">
+              <p className="text-sm font-medium text-slate-300">Notification methods:</p>
+              
+              {/* Browser Notification */}
+              <label className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔔</span>
+                  <div>
+                    <p className="text-sm font-medium text-white">Browser Notification</p>
+                    <p className="text-xs text-slate-400">Desktop push notification</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={alertEnabled}
+                  onChange={(e) => setAlertEnabled(e.target.checked)}
+                  className="w-5 h-5 rounded accent-blue-500"
+                />
+              </label>
+
+              {/* Telegram Notification */}
+              <label className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📱</span>
+                  <div>
+                    <p className="text-sm font-medium text-white">Telegram Bot</p>
+                    <p className="text-xs text-slate-400">Message to your Telegram</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={telegramEnabled}
+                  onChange={(e) => setTelegramEnabled(e.target.checked)}
+                  className="w-5 h-5 rounded accent-blue-500"
+                />
+              </label>
+            </div>
+
+            {(alertEnabled || telegramEnabled) ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                   <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                   <span className="text-sm text-green-400 font-medium">
                     Alert is active
+                    {alertEnabled && telegramEnabled && ' (Browser + Telegram)'}
+                    {alertEnabled && !telegramEnabled && ' (Browser only)'}
+                    {!alertEnabled && telegramEnabled && ' (Telegram only)'}
                   </span>
                 </div>
                 <button
-                  onClick={() => setAlertEnabled(false)}
+                  onClick={() => {
+                    setAlertEnabled(false);
+                    setTelegramEnabled(false);
+                  }}
                   className="w-full bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-3 rounded-lg font-bold hover:bg-red-500/20 transition-all"
                 >
-                  Disable Alert
+                  Disable All Alerts
                 </button>
               </div>
             ) : (
@@ -299,7 +357,7 @@ export default function GasWizard() {
                 onClick={enableAlert}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg"
               >
-                Enable Alert
+                Enable Alerts
               </button>
             )}
 
