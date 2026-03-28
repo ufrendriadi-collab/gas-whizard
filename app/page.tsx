@@ -14,7 +14,6 @@ export default function GasWizard() {
   const [pulse, setPulse] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  // Alert states
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState<number>(15);
   const [alertEnabled, setAlertEnabled] = useState(false);
@@ -198,8 +197,9 @@ export default function GasWizard() {
   };
 
   return (
+    // FIX: overflow-x-hidden prevents horizontal scroll on mobile
     <div
-      className="min-h-screen transition-colors duration-300"
+      className="min-h-screen overflow-x-hidden transition-colors duration-300"
       style={{ background: t.bg, color: t.text, fontFamily: "'DM Sans', system-ui, sans-serif" }}
     >
       <style>{`
@@ -234,35 +234,35 @@ export default function GasWizard() {
         .modal-backdrop { backdrop-filter: blur(8px); }
       `}</style>
 
-      {/* Backgrounds */}
       <div className="fixed inset-0 grid-bg pointer-events-none" />
       <div className="fixed inset-0 pointer-events-none" style={{ background: t.topGlow }} />
 
       {/* ── Header ── */}
       <header
-        className="relative z-20 flex items-center justify-between px-6 py-4 sticky top-0"
+        className="relative z-20 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 sticky top-0"
         style={{ borderBottom: `1px solid ${t.border}`, background: t.headerBg, backdropFilter: 'blur(14px)' }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-9 h-9 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Fuel className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="relative flex-shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Fuel className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             {alertActive && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2" style={{ borderColor: t.bg }} />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2" style={{ borderColor: t.bg }} />
             )}
           </div>
-          <div>
-            <span className="gas-number text-lg tracking-tight" style={{ color: t.text }}>GasWizard</span>
-            <span className="ml-2 text-[10px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">ETH</span>
+          {/* FIX: truncate logo text on very small screens */}
+          <div className="min-w-0">
+            <span className="gas-number text-base sm:text-lg tracking-tight truncate" style={{ color: t.text }}>GasWizard</span>
+            <span className="ml-1.5 text-[9px] sm:text-[10px] text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">ETH</span>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* ETH Price */}
-          <div className="hidden sm:flex flex-col items-end mr-1">
+        {/* Controls — FIX: tighter gap, smaller buttons on mobile */}
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          {/* ETH Price - desktop only */}
+          <div className="hidden md:flex flex-col items-end mr-1">
             <span className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: t.textMuted }}>ETH</span>
             <span className="text-sm font-bold" style={{ color: t.text }}>
               {currency === 'IDR'
@@ -272,11 +272,11 @@ export default function GasWizard() {
           </div>
 
           {/* Currency toggle */}
-          <div className="flex items-center rounded-full p-1 gap-0.5"
+          <div className="flex items-center rounded-full p-0.5 sm:p-1 gap-0.5"
             style={{ background: t.chipBg, border: `1px solid ${t.border}` }}>
             {(['IDR', 'USD'] as const).map(c => (
               <button key={c} onClick={() => setCurrency(c)}
-                className="px-3 py-1 rounded-full text-xs font-bold transition-all"
+                className="px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all"
                 style={{ background: currency === c ? '#3b82f6' : 'transparent', color: currency === c ? '#fff' : t.textMuted }}>
                 {c}
               </button>
@@ -286,68 +286,74 @@ export default function GasWizard() {
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="theme-btn w-9 h-9 flex items-center justify-center rounded-full"
+            className="theme-btn w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full flex-shrink-0"
             style={{ background: t.chipBg, border: `1px solid ${t.border}` }}
-            title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
           >
-            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-500" />}
+            {isDark ? <Sun className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" /> : <Moon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />}
           </button>
 
-          {/* Alert button */}
+          {/* Alert button — icon only on mobile */}
           <button
             onClick={() => setShowAlertModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs font-semibold transition-all flex-shrink-0"
             style={{
               background: alertActive ? 'rgba(52,211,153,0.1)' : t.chipBg,
               border: `1px solid ${alertActive ? 'rgba(52,211,153,0.3)' : t.border}`,
               color: alertActive ? '#34d399' : t.textMuted,
             }}
           >
-            <Bell className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{alertActive ? 'Alert On' : 'Set Alert'}</span>
-            {alertActive && <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
+            <Bell className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">{alertActive ? 'Alert On' : 'Set Alert'}</span>
+            {alertActive && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-400 rounded-full animate-pulse flex-shrink-0" />}
           </button>
         </div>
       </header>
 
       {/* ── Main ── */}
-      <main className="relative z-10 container mx-auto px-6 py-10 max-w-4xl">
+      {/* FIX: px-4 on mobile instead of px-6 */}
+      <main className="relative z-10 container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl">
 
         {/* Hero card */}
-        <div className="fade-in mb-8">
-          <div className="relative rounded-3xl overflow-hidden p-8 sm:p-12"
+        <div className="fade-in mb-6 sm:mb-8">
+          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden p-5 sm:p-12"
             style={{ background: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowGlow }}>
             <div className="absolute inset-0 pointer-events-none" style={{ background: t.heroGlow }} />
             <div className="relative text-center">
 
               {/* Status badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full mb-4 sm:mb-6"
                 style={{ background: t.chipBg, border: `1px solid ${t.border}` }}>
-                <span className={`w-2 h-2 rounded-full pulse-dot ${status.dot}`} />
-                <span className={`text-xs font-semibold uppercase tracking-widest ${status.color}`}>{status.label} Gas</span>
-                <Activity className="w-3 h-3" style={{ color: t.textMuted }} />
+                <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full pulse-dot ${status.dot}`} />
+                <span className={`text-[10px] sm:text-xs font-semibold uppercase tracking-widest ${status.color}`}>{status.label} Gas</span>
+                <Activity className="w-2.5 h-2.5 sm:w-3 sm:h-3" style={{ color: t.textMuted }} />
               </div>
 
-              {/* Gas number */}
-              <div className={`gas-number text-[5rem] sm:text-[8rem] md:text-[10rem] leading-none mb-2 transition-colors duration-300 ${pulse ? 'number-pop' : ''}`}
-                style={{ color: t.gasColor }}>
+              {/* Gas number — FIX: clamp keeps it from overflowing on any screen */}
+              <div
+                className={`gas-number leading-none mb-2 transition-colors duration-300 ${pulse ? 'number-pop' : ''}`}
+                style={{
+                  color: t.gasColor,
+                  fontSize: 'clamp(2.5rem, 15vw, 8rem)',
+                  wordBreak: 'break-all',
+                }}
+              >
                 {gasPrice}
               </div>
-              <div className="text-sm tracking-[0.4em] uppercase mb-8" style={{ color: t.textMuted }}>Gwei</div>
+              <div className="text-xs sm:text-sm tracking-[0.3em] sm:tracking-[0.4em] uppercase mb-6 sm:mb-8" style={{ color: t.textMuted }}>Gwei</div>
 
               {/* Refresh row */}
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
                 <button onClick={fetchGas} disabled={loading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all disabled:opacity-40"
+                  className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all disabled:opacity-40"
                   style={{ background: t.chipBg, border: `1px solid ${t.border}`, color: t.textMuted }}>
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
                 {isCached && (
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-full"
+                  <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full"
                     style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                    <span className="text-xs text-blue-400 font-medium">Cached · {cacheAge}s ago</span>
+                    <span className="text-[10px] sm:text-xs text-blue-400 font-medium whitespace-nowrap">Cached · {cacheAge}s ago</span>
                   </div>
                 )}
               </div>
@@ -355,94 +361,109 @@ export default function GasWizard() {
           </div>
         </div>
 
-        {/* Speed tiers */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {/* Speed tiers — FIX: 3 cols on mobile too, smaller padding */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
 
           {/* Slow */}
-          <div className="card-hover rounded-2xl p-6 fade-in"
+          <div className="card-hover rounded-xl sm:rounded-2xl p-3 sm:p-6 fade-in"
             style={{ background: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowCard, animationDelay: '0.1s' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🐢</span>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Slow</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-4 gap-1">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-base sm:text-xl">🐢</span>
+                <span className="text-[9px] sm:text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Slow</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: t.chipBg, color: t.textMuted }}>~5 min</span>
+              <span className="hidden sm:inline text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: t.chipBg, color: t.textMuted }}>~5 min</span>
             </div>
-            <div className="gas-number text-3xl mb-1" style={{ color: t.text }}>
+            <div className="gas-number text-lg sm:text-3xl mb-0.5 sm:mb-1 truncate" style={{ color: t.text }}>
               {gasPrice !== '...' && gasPrice !== 'Error' && gasPrice !== 'Limit'
-                ? (parseFloat(gasPrice) * 0.9).toFixed(3) : '—'}
+                ? (parseFloat(gasPrice) * 0.9).toFixed(2) : '—'}
             </div>
-            <div className="text-xs mb-3" style={{ color: t.textMuted }}>Gwei</div>
-            <div className="text-sm font-bold text-emerald-500">
+            <div className="text-[9px] sm:text-xs mb-1 sm:mb-3" style={{ color: t.textMuted }}>Gwei</div>
+            <div className="text-[10px] sm:text-sm font-bold text-emerald-500 truncate">
               {calculateCost(21000, 0.9) > 0 ? formatCurrency(calculateCost(21000, 0.9)) : '—'}
             </div>
           </div>
 
           {/* Market */}
-          <div className="card-hover relative rounded-2xl p-6 fade-in"
+          <div className="card-hover relative rounded-xl sm:rounded-2xl p-3 sm:p-6 fade-in"
             style={{
               background: isDark ? 'rgba(59,130,246,0.06)' : 'rgba(59,130,246,0.05)',
               border: `1px solid ${t.borderAccent}`,
               boxShadow: isDark ? '0 8px 32px rgba(59,130,246,0.12)' : '0 8px 32px rgba(59,130,246,0.08)',
               animationDelay: '0.15s',
             }}>
-            <div className="absolute top-3 right-3">
+            <div className="hidden sm:block absolute top-3 right-3">
               <span className="text-[9px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Recommended</span>
             </div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">⚖️</span>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-400">Market</span>
+            <div className="flex items-center gap-1 sm:gap-2 mb-2 sm:mb-4">
+              <span className="text-base sm:text-xl">⚖️</span>
+              <span className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-blue-400">Market</span>
             </div>
-            <div className="gas-number text-3xl text-blue-400 mb-1">{gasPrice}</div>
-            <div className="text-xs mb-3" style={{ color: t.textMuted }}>Gwei</div>
-            <div className="text-sm font-bold text-blue-400">
+            <div className="gas-number text-lg sm:text-3xl text-blue-400 mb-0.5 sm:mb-1 truncate">{gasPrice}</div>
+            <div className="text-[9px] sm:text-xs mb-1 sm:mb-3" style={{ color: t.textMuted }}>Gwei</div>
+            <div className="text-[10px] sm:text-sm font-bold text-blue-400 truncate">
               {calculateCost(21000, 1.0) > 0 ? formatCurrency(calculateCost(21000, 1.0)) : '—'}
             </div>
           </div>
 
           {/* Instant */}
-          <div className="card-hover rounded-2xl p-6 fade-in"
+          <div className="card-hover rounded-xl sm:rounded-2xl p-3 sm:p-6 fade-in"
             style={{ background: t.surface, border: `1px solid ${t.border}`, boxShadow: t.shadowCard, animationDelay: '0.2s' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">⚡</span>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Instant</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-4 gap-1">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="text-base sm:text-xl">⚡</span>
+                <span className="text-[9px] sm:text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Instant</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: t.chipBg, color: t.textMuted }}>~15s</span>
+              <span className="hidden sm:inline text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: t.chipBg, color: t.textMuted }}>~15s</span>
             </div>
-            <div className="gas-number text-3xl text-amber-400 mb-1">
+            <div className="gas-number text-lg sm:text-3xl text-amber-400 mb-0.5 sm:mb-1 truncate">
               {gasPrice !== '...' && gasPrice !== 'Error' && gasPrice !== 'Limit'
-                ? (parseFloat(gasPrice) * 1.3).toFixed(3) : '—'}
+                ? (parseFloat(gasPrice) * 1.3).toFixed(2) : '—'}
             </div>
-            <div className="text-xs mb-3" style={{ color: t.textMuted }}>Gwei</div>
-            <div className="text-sm font-bold text-amber-400">
+            <div className="text-[9px] sm:text-xs mb-1 sm:mb-3" style={{ color: t.textMuted }}>Gwei</div>
+            <div className="text-[10px] sm:text-sm font-bold text-amber-400 truncate">
               {calculateCost(21000, 1.3) > 0 ? formatCurrency(calculateCost(21000, 1.3)) : '—'}
             </div>
           </div>
 
         </div>
 
-        <div className="text-center text-xs" style={{ color: t.textSubtle }}>
+        {/* ETH price row on mobile */}
+        <div className="flex md:hidden items-center justify-center gap-2 mb-4 text-xs" style={{ color: t.textMuted }}>
+          <span>ETH:</span>
+          <span className="font-bold" style={{ color: t.text }}>
+            {currency === 'IDR'
+              ? (ethPrice > 0 ? `Rp ${ethPrice.toLocaleString('id-ID')}` : '—')
+              : (ethPriceUSD > 0 ? `$${ethPriceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—')}
+          </span>
+        </div>
+
+        <div className="text-center text-[10px] sm:text-xs" style={{ color: t.textSubtle }}>
           Prices for standard ETH transfer (21,000 gas units) · Auto-refresh every 30s
         </div>
       </main>
 
       {/* ── Alert Modal ── */}
       {showAlertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop"
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-backdrop"
           style={{ background: 'rgba(0,0,0,0.5)' }}>
-          <div className="rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto fade-in"
+          {/* FIX: on mobile, modal slides up from bottom like a sheet */}
+          <div className="rounded-t-2xl sm:rounded-2xl p-5 sm:p-8 w-full sm:max-w-md shadow-2xl max-h-[90vh] overflow-y-auto fade-in"
             style={{ background: t.modalBg, border: `1px solid ${t.border}` }}>
 
-            {/* Modal header */}
-            <div className="flex items-center justify-between mb-6">
+            {/* Drag handle on mobile */}
+            <div className="flex justify-center mb-4 sm:hidden">
+              <div className="w-10 h-1 rounded-full" style={{ background: t.border }} />
+            </div>
+
+            <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
-                  <Bell className="w-4 h-4 text-blue-400" />
+                  <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold" style={{ color: t.text }}>Gas Alert</h2>
+                  <h2 className="text-base sm:text-lg font-bold" style={{ color: t.text }}>Gas Alert</h2>
                   <p className="text-xs" style={{ color: t.textMuted }}>Notify when gas drops below threshold</p>
                 </div>
               </div>
@@ -453,8 +474,7 @@ export default function GasWizard() {
               </button>
             </div>
 
-            {/* Threshold input */}
-            <div className="mb-5">
+            <div className="mb-4 sm:mb-5">
               <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: t.textMuted }}>
                 Threshold (Gwei)
               </label>
@@ -463,7 +483,7 @@ export default function GasWizard() {
                   type="number"
                   value={alertThreshold}
                   onChange={(e) => setAlertThreshold(parseFloat(e.target.value) || 0)}
-                  className="w-full rounded-xl px-4 py-3 text-2xl gas-number font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full rounded-xl px-4 py-3 text-xl sm:text-2xl gas-number font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   style={{ background: t.inputBg, border: `1px solid ${t.border}`, color: t.text }}
                   step="0.1" min="0"
                 />
@@ -474,8 +494,7 @@ export default function GasWizard() {
               </p>
             </div>
 
-            {/* Presets */}
-            <div className="mb-5">
+            <div className="mb-4 sm:mb-5">
               <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: t.textMuted }}>Quick presets</p>
               <div className="flex gap-2">
                 {[10, 15, 20, 30].map((preset) => (
@@ -492,8 +511,7 @@ export default function GasWizard() {
               </div>
             </div>
 
-            {/* Notification methods */}
-            <div className="mb-6 space-y-2">
+            <div className="mb-5 space-y-2">
               <p className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: t.textMuted }}>Notification methods</p>
               {[
                 {
@@ -510,10 +528,10 @@ export default function GasWizard() {
                 },
               ].map((item) => (
                 <label key={item.label}
-                  className="flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all"
+                  className="flex items-center justify-between p-3 sm:p-4 rounded-xl cursor-pointer transition-all"
                   style={{ background: t.inputBg, border: `1px solid ${t.border}` }}>
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: t.chipBg }}>
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center text-base sm:text-lg" style={{ background: t.chipBg }}>
                       {item.icon}
                     </div>
                     <div>
@@ -528,7 +546,6 @@ export default function GasWizard() {
               ))}
             </div>
 
-            {/* CTA */}
             {alertActive ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 rounded-xl"
